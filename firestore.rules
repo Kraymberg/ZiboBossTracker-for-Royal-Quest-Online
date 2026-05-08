@@ -1,0 +1,19 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // History Collection Rules
+    match /history/{entryId} {
+      allow read, write: if true; 
+    }
+
+    // Users Collection Rules
+    // Since we rely on Telegram Auth (initData) and not Firebase Auth,
+    // we cannot use request.auth here. We open write access to allow
+    // the frontend to manage users. 
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+  }
+}
