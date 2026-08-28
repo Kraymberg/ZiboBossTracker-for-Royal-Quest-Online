@@ -228,6 +228,7 @@ export const App: React.FC = () => {
       lastDeath,
       schedule,
       currentStatus,
+      respawnModel,
       frankResData,
       vtpAnalysis,
       masterTableData,
@@ -567,6 +568,7 @@ export const App: React.FC = () => {
                         isSimulationActive={isSimulationActive}
                         currentStatus={currentStatus}
                         lastDeath={lastDeath}
+                        respawnModel={respawnModel}
                     />
 
                     <RouteBlock 
@@ -576,6 +578,7 @@ export const App: React.FC = () => {
                         lastDeath={lastDeath}
                         userRole={userProfile?.role || 'viewer'}
                         transitionsMatrix={transitionsMatrix}
+                        respawnModel={respawnModel}
                     />
 
                     <LastDeathBlock 

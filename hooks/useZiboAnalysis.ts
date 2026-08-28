@@ -4,6 +4,7 @@ import { addMinutes, addHours, addSeconds, differenceInSeconds, isValid, differe
 import { ArchiveEntry, ScheduleData } from '../types';
 import { LOCATIONS, ROTATION_DATA, CYCLE_MAP, MASTER_CD_OFFSETS, VTP_OFFSETS } from '../constants';
 import { isLazyEntry } from '../utils';
+import { useRespawnZoneModel, RespawnZoneModel } from './useRespawnZoneModel';
 
 export const useZiboAnalysis = (
     events: ArchiveEntry[],
@@ -496,6 +497,13 @@ export const useZiboAnalysis = (
         } else return { state: 'closed', text: 'ОКНО ЗАКРЫТО', label: 'СТАТУС ПОИСКА' };
       }, [schedule, effectiveNow]);
 
+      const respawnModel: RespawnZoneModel = useRespawnZoneModel(
+        effectiveEvents,
+        effectiveNow,
+        lastDeath,
+        schedule
+      );
+
       return {
           effectiveNow,
           effectiveEvents,
@@ -503,6 +511,7 @@ export const useZiboAnalysis = (
           lastMaintenance,
           schedule,
           currentStatus,
+          respawnModel,
           frankResData,
           vtpAnalysis,
           masterTableData,

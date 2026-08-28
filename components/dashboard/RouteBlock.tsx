@@ -1,8 +1,9 @@
 
 import React, { useRef, useState } from 'react';
 import { Route as RouteIcon, Copy, Check, Activity, Snowflake } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addMinutes } from 'date-fns';
 import { ScheduleData, UserRole } from '../../types';
+import { RespawnZoneModel } from '../../hooks/useRespawnZoneModel';
 
 interface RouteBlockProps {
   isSimulationActive: boolean;
@@ -11,9 +12,10 @@ interface RouteBlockProps {
   lastDeath: { time: string; location: string } | null;
   userRole?: UserRole;
   transitionsMatrix?: Record<string, Record<string, number>>;
+  respawnModel?: RespawnZoneModel | null;
 }
 
-export const RouteBlock: React.FC<RouteBlockProps> = ({ isSimulationActive, schedule, effectiveNow, lastDeath, userRole, transitionsMatrix }) => {
+export const RouteBlock: React.FC<RouteBlockProps> = ({ isSimulationActive, schedule, effectiveNow, lastDeath, userRole, transitionsMatrix, respawnModel }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isCopied, setIsCopied] = useState(false);
   const [routeMode, setRouteMode] = useState<'standard' | 'frost'>('standard');
@@ -38,6 +40,26 @@ export const RouteBlock: React.FC<RouteBlockProps> = ({ isSimulationActive, sche
 
   const probs = getProbabilities();
 
+  const slotZoneProbMap = (i: number): Record<string, number> => respawnModel?.slotZoneProbs?.[i] || {};
+
+  const sortForSlot = (i: number, locations: string[]): string[] => {
+    const zoneProbs = slotZoneProbMap(i);
+    return [...locations].sort((a, b) => {
+      const isA = a === lastDeath?.location;
+      const isB = b === lastDeath?.location;
+      if (isA && !isB) return 1;
+      if (!isA && isB) return -1;
+
+      const zpA = zoneProbs[a] || 0;
+      const zpB = zoneProbs[b] || 0;
+      if (zpA !== zpB) return zpB - zpA;
+
+      const probA = probs[a] || 0;
+      const probB = probs[b] || 0;
+      return probB - probA;
+    });
+  };
+
   const handleCopyRoute = async () => {
     if (!schedule) return;
 
@@ -47,16 +69,7 @@ export const RouteBlock: React.FC<RouteBlockProps> = ({ isSimulationActive, sche
             const end = format(slot.end, "HH:mm");
             
             // Sort by probability, but lastDeath always at the end
-            let sortedLocations = [...slot.locations].sort((a, b) => {
-                const isA = a === lastDeath?.location;
-                const isB = b === lastDeath?.location;
-                if (isA && !isB) return 1;
-                if (!isA && isB) return -1;
-                
-                const probA = probs[a] || 0;
-                const probB = probs[b] || 0;
-                return probB - probA;
-            });
+            let sortedLocations = sortForSlot(slotIndex, slot.locations);
 
             if (routeMode === 'frost' && slotIndex === 0) {
                 sortedLocations = sortedLocations.filter(loc => loc !== 'Морозная длань');
@@ -122,7 +135,30 @@ export const RouteBlock: React.FC<RouteBlockProps> = ({ isSimulationActive, sche
                 </button>
             </div>
         </div>
-        
+
+        {respawnModel?.ready && respawnModel.topCandidateTimes.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mb-3 px-0.5">
+                <span className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 mr-1">Пики</span>
+                {respawnModel.topCandidateTimes.map((tp, idx) => {
+                    const windowStart = addMinutes(tp.time, -5);
+                    const windowEnd = addMinutes(tp.time, 5);
+                    const isActive = effectiveNow >= windowStart && effectiveNow <= windowEnd;
+                    const isPast = effectiveNow > windowEnd;
+                    return (
+                        <span key={idx} className={`font-mono text-[9px] font-black px-1.5 py-1 rounded-md border transition-colors ${
+                            isActive 
+                                ? 'bg-cyan-500/25 text-cyan-200 border-cyan-400/50 animate-pulse' 
+                                : isPast 
+                                    ? 'bg-white/5 text-slate-600 border-white/5 line-through' 
+                                    : 'bg-white/5 text-slate-300 border-white/10'
+                        }`} title={`Окно обнаружения ${format(windowStart, "HH:mm")} - ${format(windowEnd, "HH:mm")}`}>
+                            {format(tp.time, "HH:mm")}
+                        </span>
+                    );
+                })}
+            </div>
+        )}
+
         <div className="grid grid-cols-1 gap-1 overflow-y-auto pr-1 flex-1 custom-scrollbar">
             {(() => {
                 const displayedProbsRender = new Set<string>();
@@ -131,16 +167,7 @@ export const RouteBlock: React.FC<RouteBlockProps> = ({ isSimulationActive, sche
                     const isPeak = slot.hasVtp5 || slot.hasVtp6 || slot.isVtpWindow;
                     
                     // Sort locations: crossed out (lastDeath location) goes to the end, others by probability
-                    let sortedLocations = [...slot.locations].sort((a, b) => {
-                        const isA = a === lastDeath?.location;
-                        const isB = b === lastDeath?.location;
-                        if (isA && !isB) return 1;
-                        if (!isA && isB) return -1;
-                        
-                        const probA = probs[a] || 0;
-                        const probB = probs[b] || 0;
-                        return probB - probA;
-                    });
+                    let sortedLocations = sortForSlot(i, slot.locations);
 
                     if (routeMode === 'frost' && i === 0) {
                         sortedLocations = sortedLocations.filter(l => l !== 'Морозная длань');

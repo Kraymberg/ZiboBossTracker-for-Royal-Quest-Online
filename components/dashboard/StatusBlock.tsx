@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { MapPin } from 'lucide-react';
+import { RespawnZoneModel } from '../../hooks/useRespawnZoneModel';
 
 interface StatusBlockProps {
   isSimulationActive: boolean;
@@ -11,9 +12,10 @@ interface StatusBlockProps {
     locations?: string[];
   };
   lastDeath: { time: string; location: string } | null;
+  respawnModel?: RespawnZoneModel | null;
 }
 
-export const StatusBlock: React.FC<StatusBlockProps> = ({ isSimulationActive, currentStatus, lastDeath }) => {
+export const StatusBlock: React.FC<StatusBlockProps> = ({ isSimulationActive, currentStatus, lastDeath, respawnModel }) => {
   const isSearching = currentStatus.state === 'searching';
   const isClosed = currentStatus.state === 'closed';
   const isWaiting = currentStatus.state === 'waiting';
@@ -48,25 +50,44 @@ export const StatusBlock: React.FC<StatusBlockProps> = ({ isSimulationActive, cu
         </div>
 
         {isSearching && (
-            <div className="flex flex-wrap gap-2 mt-2 relative z-10 justify-center">
-                {[...(currentStatus.locations || [])].sort((a, b) => {
-                    const isA = a === lastDeath?.location;
-                    const isB = b === lastDeath?.location;
-                    if (isA && !isB) return 1;
-                    if (!isA && isB) return -1;
-                    return 0;
-                }).map((loc) => {
-                    const isDead = loc === lastDeath?.location;
-                    // We need to get probabilities here too. 
-                    // Since StatusBlock doesn't have transitionsMatrix, we'll just show the locations.
-                    // Wait, if I want to show probabilities, I need to pass them.
-                    return (
-                        <div key={loc} className={`group/loc flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black border transition-all ${isDead ? 'bg-red-500/10 border-red-500/20 text-red-400/30 line-through' : (isSimulationActive ? 'bg-amber-500/5 border-amber-500/40 text-amber-100' : 'bg-cyan-500/5 border-cyan-500/40 text-cyan-100')}`}>
-                            <MapPin size={10} className={isDead ? 'text-red-900' : (isSimulationActive ? 'text-amber-400' : 'text-cyan-400')} />
-                            {loc.toUpperCase()}
+            <div className="flex flex-col gap-2 mt-2 relative z-10 justify-center items-center">
+                {respawnModel?.currentTopLocations?.length ? (
+                    <>
+                        <div className="flex flex-wrap gap-2 justify-center">
+                            {respawnModel.currentTopLocations.map((item) => {
+                                const isDead = item.loc === lastDeath?.location;
+                                return (
+                                    <div key={item.loc} className={`group/loc flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black border transition-all ${isDead ? 'bg-red-500/10 border-red-500/20 text-red-400/30 line-through' : (isSimulationActive ? 'bg-amber-500/5 border-amber-500/40 text-amber-100' : 'bg-cyan-500/5 border-cyan-500/40 text-cyan-100')}`}>
+                                        <MapPin size={10} className={isDead ? 'text-red-900' : (isSimulationActive ? 'text-amber-400' : 'text-cyan-400')} />
+                                        {item.loc.toUpperCase()}
+                                        <span className={`px-1.5 py-0.5 rounded text-[8px] ${isSimulationActive ? 'bg-amber-500/20 text-amber-300' : 'bg-cyan-500/20 text-cyan-300'}`}>{item.prob}%</span>
+                                    </div>
+                                );
+                            })}
                         </div>
-                    );
-                })}
+                        <div className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500">
+                            {respawnModel.currentDelayMin !== null ? `Задержка ${respawnModel.currentDelayMin} мин · Зона ${respawnModel.currentZone?.toUpperCase() || '—'}` : ''}
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex flex-wrap gap-2 justify-center">
+                        {[...(currentStatus.locations || [])].sort((a, b) => {
+                            const isA = a === lastDeath?.location;
+                            const isB = b === lastDeath?.location;
+                            if (isA && !isB) return 1;
+                            if (!isA && isB) return -1;
+                            return 0;
+                        }).map((loc) => {
+                            const isDead = loc === lastDeath?.location;
+                            return (
+                                <div key={loc} className={`group/loc flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[10px] sm:text-[11px] font-black border transition-all ${isDead ? 'bg-red-500/10 border-red-500/20 text-red-400/30 line-through' : (isSimulationActive ? 'bg-amber-500/5 border-amber-500/40 text-amber-100' : 'bg-cyan-500/5 border-cyan-500/40 text-cyan-100')}`}>
+                                    <MapPin size={10} className={isDead ? 'text-red-900' : (isSimulationActive ? 'text-amber-400' : 'text-cyan-400')} />
+                                    {loc.toUpperCase()}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         )}
     </div>
