@@ -5,11 +5,11 @@ import { INITIAL_CHAT_HISTORY } from './constants';
 
 // --- ВСТАВЬТЕ ВАШИ КЛЮЧИ НИЖЕ ---
 const firebaseConfig = {
-  apiKey: "***REMOVED***",
-  authDomain: "***REMOVED***.firebaseapp.com",
-  projectId: "***REMOVED***",
-  storageBucket: "***REMOVED***.firebasestorage.app",
-  messagingSenderId: "***REMOVED***"
+  apiKey: "",
+  authDomain: ",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: ""
 };
 
 // Initialize Firebase (Modular SDK)
